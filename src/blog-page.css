@@ -1,0 +1,25 @@
+body {
+    background-color: #e6e6e6; /* Set the background color to black */
+    color: #000000;             /* Set text color to white for contrast */
+    font-size: 1.5em;
+    hr {
+        margin-top: 5px;  /* Increase space above the line */
+        margin-bottom: 5px; /* Optional: Adjust space below the line */
+        border: 0;  /* Optional: Remove the default border style */
+        border-top: 2px solid #000000;  /* Customize the line's appearance */
+    }
+}
+
+.title-of-blog {
+    hr {
+        margin-top: 5px;  /* Increase space above the line */
+        margin-bottom: 20px; /* Optional: Adjust space below the line */
+        border: 0;  /* Optional: Remove the default border style */
+        border-top: 0.5em solid #39e486;  /* Customize the line's appearance */
+    }
+}
+#home {
+    font-size: 1em;
+    text-align: right;
+    width: auto;
+}
