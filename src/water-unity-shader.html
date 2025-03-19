@@ -17,6 +17,35 @@
         <source src="assets/procedural-water/waterShaderStill.mp4" type="video/mp4">
         Your browser does not support the video tag.
     </video>
+    <h3>Motivation</h3>
+    <p> In my upcoming rhythm game <a href="https://github.com/des1gnerw1tch/hyper-runner">hyperRunner2.5D</a> I am developing a boss fight that will take
+    the form of a street race.
+    I was introduced to real-time computer graphics after taking a computer graphics class in C++ and OpenGL. I'm excited to apply what I learned to my game.
+    Let's make a water shader. I already had implemented a curved world shader that resembles animal crossing, 
+    <a href="https://www.youtube.com/watch?v=GF0_1-8NWBs">following this great youtube tutorial</a> from Rigor Mortis Tortoise.
+    This shader modifies the vertex positions of a mesh to emulate a curved world, lowering vertices that are farther away from the camera,
+    similar to Subway Surfers or Animal Crossing. It looks great for the racing
+    minigame. I used this shader as the base to create the dynamic water effect.</p>
+    <h3>Preparing the Mesh with Blender</h3>
+    <p>First thing I did was subdivide a plane in blender a couple times. 
+        After experimentation 4,225 vertices gave me enough detail for small/medium 
+        sized waves. These vertices will be manipulated by the water shader to emulate waves on the surface of water. The plane object was
+        UV unwrapped as well, so it will work with our perlin noise.
+    </p>
+    <img src="assets/procedural-water/subdividedPlane.png" alt="Subdivided plane" width="800px">
+    <h3>Shadergraph</h3>
+    <p>Below is the main section of the shader graph file.
+    The curved world shader bits are added into the pipeline later, this
+    image focuses on water. <i>outPos(3)</i> and <i>normal(3)</i> all the way on the top right
+    are the end products that we feed into the <i>Position()</i> and <i>Normal()</i> channel 
+    of the Fragment shader node.</p>
+    <img src="assets/procedural-water/shadergraphMain.png" alt="Shader graph main section" width="1800px">
+    <p>Lets split into sections.</p>
+    <img src="assets/procedural-water/shadergraphMainAnnotated.png" alt="Shader graph main section" width="1800px">
+    <br>
+
+
+    
     <p>Write-up in progress..</p>
     <video autoplay loop muted playsinline width=1200px>
         <source src="assets/procedural-water/waterShaderRacing.mp4" type="video/mp4">
