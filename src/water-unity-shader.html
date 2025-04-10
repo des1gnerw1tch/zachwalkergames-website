@@ -43,6 +43,61 @@
     <p>Lets split into sections.</p>
     <img src="assets/procedural-water/shadergraphMainAnnotated.png" alt="Shader graph main section" width="1800px">
     <br>
+    
+    <h4>Section 1: Preparing the plane UV coordinates</h4>
+    <p>I first take the UV coordinate of the vertex/frag on the plane. Because I scaled the plane
+    to have a ratio of x y scale 3:1 in Unity, 
+    I also need to scale the UV coordinates so that the noise is not disorted in the X direction.
+    This is why we multiply the x UV coordinate by 3. We then feed the transformed UV coordinate
+    into our animate waves function. This is what gives the waves motion.</p>
+
+    <h4>Section 2: </h4>
+    <i>AnimateWaves.hlsl</i>
+    <br>
+    <img src="assets/procedural-water/animateWavesScript.png" alt="Animate waves picture" width="1500px">
+    <br>
+    <p>
+        This is a Shadergraph custom node that I wrote. Shadergraph provides some nodes themself, such as
+        noise nodes, math nodes (multiplication/addition etc.), and more. There is a lot you can do
+        with the built in Shadergraph nodes, but I find it can be cleaner and more precise to write custom
+        nodes when things get more complicated. That said this is a pretty simple script. The idea is that
+        we get the UV coordinate from the vertex or fragment (Shadergraph decides this and I'm still unclear
+        how they decide, more on this later), and we want to move the x UV coordinate over time. If we 
+        move the x UV coordinate over time, and keep the noise static, we create a horizontal scrolling effect
+        emulating waves moving. 
+
+        Let's discuss the inputs and outputs! <br>
+        <b>Inputs</b>
+        <ol>
+            <li><i>uv</i> is the UV coordinate obtained from Section 1</li>
+            <li><i>uvDistanceForNormalCalc</i> is a small value that was tweaked to calculate
+                vertex normals (more on this later) </li>
+        </ol>
+        <b>Outputs</b>
+        <ol>
+            <li><i>animatedUV</i> The UV coordinate after movement for this render step</li>
+            <li><i>uvToRight</i> The UV coordinate after movement just to the right of this vert/frag</li>
+            <li><i>uvToUpwards</i> The UV coordinate after movement just above this vert/frag</li>
+        </ol>
+        <i>animatedUV</i> is calculated by adding a factor of <i>_Time</i>.<i> x</i> to the original UV
+        x coordinate. <i>_Time</i> is a built in 
+        <a href="https://docs.unity3d.com/Manual/SL-UnityShaderVariables.html">Unity shader variable</a> 
+        that provides the Time since this scene has loaded. Through experimentation, we don't need to
+        wrap the <i>animatedUV</i> between 0 and 1, which is normally what UV coordinates are wrapped
+        between. Unity will do this wrapping for us so we can just keep adding <i>_Time</i>.<i> x</i>
+        without clamping anything. 
+        <i>uvToRight</i> and <i>uvUpwards</i> are simply the UV coordinates just above the animated UV
+        and just to the right of the animated UV. This is used to calculuate the normal value of this
+        vert/frag. Because we are modifying the vertex positions in the shader, we need to also update
+        their normals so that the lighting reflects these new positions. Finally, we feed these output
+        UVs into noise nodes. The noise node takes in a UV coordinate, and gives us a value between
+        0 and 1. The gradient noise node gives us continous noise, which is random values that blend
+        into each other, resembling topology of terrain. We decide that white values (1) is the highest
+        height a wave can be, and that black values (0) is the lowest height a wave can be. In Section 3,
+        we apply these noise values to actually change the position and normal of each vertex/frag.
+    </p>
+
+    <h4>Section 3</h4>
 
 
     
@@ -52,6 +107,13 @@
         Your browser does not support the video tag.
     </video>
     <br>
+
+    <h3>Other notes and follow up questions</h3>
+    In Shadergraph, I still don't understand whether I am working with a vertex or a fragment. Coming
+    from OpenGL, it was a little trippy as OpenGL has a very strictly separated vertex and fragment
+    shader. In Shadergraph, nodes can go to both the vertex or the fragment node. The vertex and fragment
+    node both have a position, normal, and tangent. INCLUDE PICTURE OF THE END OF THE pipeline
+    WITH THESE NODES.
 </body>
 
 </html>
