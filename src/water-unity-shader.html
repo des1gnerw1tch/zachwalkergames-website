@@ -14,10 +14,10 @@
         <hr>
     </div>
     <video autoplay loop muted playsinline width=1200px>
-        <source src="assets/procedural-water/waterShaderStill.mp4" type="video/mp4">
+        <source src="assets/procedural-water/waterShaderRacing.mp4" type="video/mp4">
         Your browser does not support the video tag.
     </video>
-    <h3>Motivation</h3>
+    <h3>Intro</h3>
     <p> In my upcoming rhythm game <a href="https://github.com/des1gnerw1tch/hyper-runner">hyperRunner2.5D</a> I am developing a boss fight that will take
     the form of a street race.
     I was introduced to real-time computer graphics after taking a computer graphics class in C++ and OpenGL. I'm excited to apply what I learned to my game.
@@ -98,17 +98,116 @@
     </p>
 
     <h4>Section 3</h4>
+    In this final section, we put everything together to get the position and normal of the vertex/fragment
+    in pipeline.
+    <img src="assets/procedural-water/createWavesFunction.png" alt="Create waves function" width="1500px">
+    <h5> Height of the Wave (Orange Section)</h5>
+    The orange section of the code determines the height of the vert/frag. <i>waveMaxHeight</i> is the amplitude of the wave, 
+    which I chose to be 5.0f for this scene's purposes. 
+    <br><br>
+    Now one may think- "This section could be one line! 
+    We could simply use our <i>simpleNoise</i> value from the noise texture, which will be between 0 and 1,
+    and multiply it by <i>waveMaxHeight</i> and add it to the y position to get our final out position! Right?"
+    <br><br>
+    Right! But there's a catch. While this would
+    work great for a singular body of water, what if we need multiple bodies of water to tile? This is the situation for this bossfight,
+    as I want the effect of endlessly scrolling waves as the player races along the river. If we just use a singular line of code as suggested, the waves look like this when placing two
+    water objects back to back.
+    <br>
+    <img src="assets/procedural-water/noCosSmoothingWaves.png" alt="No cos smoothing picture" width="800px">
+    <br>
+    The wave shape looks pretty good! But there is a issue. The bodies of water don't tile together. There is a seam
+    where one water object starts and the other water object begins. This seam breaks the illusion of one continuous body of water. 
+    <br>
+    <img src="assets/procedural-water/noCosSmoothingWavesAnnotated.png" alt="No cos smoothing picture annotated" width="1200px">
+    <br>
+    To remedy this, we need the height values at the top of one body of water to equal the height values of the
+    bottom of the next body of water. For simplicity, I decided to set these wave heights to 0 when getting close to the
+    vertical edge of the noise texture. This way, the waves will tile vertically and the two objects will seem like one 
+    continuous mesh. I experimented with this, and set the <i>waveMaxHeight</i> to 0 when UV coordinate was near the top or bottom
+    of the texture and got the result below.
+    <br>
+    <img src="assets/procedural-water/noCosButTiling.png" alt="No cos but tiling picture" width="800px">
+    <br>
+    This looks pretty good! It looks like one continuous mesh now. But see how there's a little ramp where the two water objects meet?
+    This also kinda breaks the illusion of a continuous body of water. This is because we are forcing the wave height to be 0 near the edges
+    without any type of smoothing. Let's smooth this transition out.
+    <br>
+    <br>
+    We want to start smoothing when the vert/frags UV coordinate is closer to a vertical edge than <i>startSmoothingNearYEdge</i>.
+    We want the smoothing to end and the  <i>waveMaxHeight</i> to be 0 when the vert/frags UV coordinate is closer to the vertical edge than
+    <i>beFlatWhenReachUVYCoord</i>. We calculate our <i>smoothingFactor</i> which is a value between 0 and 1, 0 indicating no smoothing (<i>waveMaxHeight</i>
+    is unchanged) and 
+    1 indicating full smoothing (which means <i>waveMaxHeight</i> should be 0). We then pipe this <i>smoothingFactor</i> into a cosine
+    function, lerping it between 0 and pi. This give us a great smoothing curve that emulates a wave. We
+    pipe the <i>smoothingFactor</i> into a slightly modified cos function that has amplitude between 0 and 1 to get our <i>cosFactor</i>
+    value. 
+    <br>
+    <img src="assets/procedural-water/modifiedCosAnnotated.png" alt="Modified cos function picture" width="1800px">
+    <br>
+    Our <i>waveMaxHeight</i> is scaled by our <i>cosFactor</i> to ensure that when just inside entered the smoothing zone, amplitude
+    of wave is mostly unchanged, but as we enter farther into the smoothing zone the max wave height will slowly become 0 in a sinusoidal
+    fashion until it bottoms out at 0 to tile. The result is below.
+    <br>
+    <img src="assets/procedural-water/cosSmoothingPicture1.png" alt="Waves after cos smoothing" width="1000px">
+    <br>
+    Pretty smooth tiling! One imperfection is that if a player looks hard enough, they may be able to see that the body of water is the
+    same height for a horizontal strip. But during high speed racing gameplay, and even from a birds-eye view, I think this imperfection will
+    go unnoticed.
+    <br>
+    <img src="assets/procedural-water/fullPictureSmoothing.png" alt="Waves after cos smoothing" width="1000px">
+    <br>
+    This is one of the things that I love about graphics programming. Small imperfections don't matter! As long as it <i>looks</i> good, it
+    <i>is</i> good, even if some corners are cut.
 
 
     
-    <p>Write-up in progress..</p>
+
+    <h5> Generating Normals (Blue Section)</h5>
+    In the blue section of our <i>MakeWaves</i> function, we calculate the normal of the frag/vert. We need normals so that 
+    diffuse lighting and specular lighting will work on our waves in real-time! Remember that
+    we aren't actually changing the plane mesh that represents the water. We change the position of vertices of the plane in the shader itself,
+    so we need to update the normals of the vert/frag depending on the topology of plane after new position value is determined. 
+    <br><br>
+    I use 3 noise values from the 
+    previous section: noise value at this UV, 
+    slightly to the right of this UV, and slightly above this UV. The idea is that I use these values to generate
+    a vector in the direction to the right, and a direction up. These two vectors describe a plane, which is a plane on
+    the surface of the water at the vert/frag position. I then take the normal of this plane to generate the normal vector of the frag/vert, which is
+    outputted as <i>normal</i>. To be honest, the axis directions in unity positional space and the axis directions in texture space 
+    didn't completely match up with my mental model I made in my head, so the last two lines of this section I flipped and negated
+    after trial and error in Unity to get the normal colors to match with the world axis. Nevertheless the normals look good! And the normals
+    from the algorithm are
+    actually shown as the color of the water in the pictures above in the orange section of the code. 
+    <br><br>
+    One thing to note is that we don't take into the smoothing factor while calculating the normals. This causes the flat section
+    of the waves to have incorrect normal calculations as shown below.
+    <br>
+    <img src="assets/procedural-water/flatNormalsImperfection.png" alt="Imperfection tiling and normals" width="1000px">
+    <br>
+    This would be a somewhat easy fix, but during gameplay light bounces around fine and it is not noticeable, so I feel
+    no need to fix this anytime soon!
+    <br>
+    <br>
+    <h3>Results</h3>
+    <p>Here are some videos of the final result!</p>
     <video autoplay loop muted playsinline width=1200px>
-        <source src="assets/procedural-water/waterShaderRacing.mp4" type="video/mp4">
+        <source src="assets/procedural-water/waterShaderStill.mp4" type="video/mp4">
+        Your browser does not support the video tag.
+    </video>
+    <p>This video above is pretty nice. Shows the movement of the waves and some of the lighting. One thing I noticed is that
+        There is a grid like pattern that pops up on the water in the shadows. Super interesting result, not sure why this is happening
+        but pretty sure this artifact is from the normal calculation.
+        This would be something fun look into in the future. For now though, during gameplay it isn't too noticeable and I think it adds
+        some character! This boss level will be the bossfight for my Cyber World level, which already has a grid as the floor! So maybe this
+        grid artifact is a happy accident. Gameplay below of cyber rhythm level.
+    </p>
+    <video autoplay loop muted playsinline width=1200px>
+        <source src="assets/procedural-water/trimmedCyberGameplay.mp4" type="video/mp4">
         Your browser does not support the video tag.
     </video>
     <br>
-
-    <h3>Other notes and follow up questions</h3>
+    <h3>Other Notes and Follow Up Questions</h3>
     In Shadergraph, I still don't understand whether I am working with a vertex or a fragment. Coming
     from OpenGL, it was a little trippy as OpenGL has a very strictly separated vertex and fragment
     shader. In Shadergraph, nodes can go to both the vertex or the fragment node. The vertex and fragment
