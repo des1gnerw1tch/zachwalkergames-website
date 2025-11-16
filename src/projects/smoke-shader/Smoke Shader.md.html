@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>zachwalkergames blog</title>
+    <link rel="stylesheet" href="blog-page.css">
+</head>
+    <div class="title-of-blog">
+        <p id="home"><a href="../../index.html" >return home</a></p>
+        <h1>Smoke Shader with Unity Shadergraph</h1>
+        11/15/25
+        <hr>
+    </div>
+<body>
+<h3>Intro</h3>
+<p></p>
+<p></p>
+<p>For particle effects, it would be cool to have smoke. Let’s have wisping smoke, we could make our particle system emit a CUBE with a SMOKE shader. The smoke would use some VORONOI noise or some texture to decide which parts decay faster, decay meaning the alpha value goes down. It will look like a wisp or puff. At the end of the singular smoke block once all the smoke is out and alpha is 0, the particle system will destroy the particle. Think legend of zelda here except use alpha value.</p>
+<p></p>
+<p>I’m deciding to start with a sphere of some sort as the bash mesh for the smoke. A cube is proving to be very pointy, and not really what smoke looks like. I’m using voronoi noise for the alpha value of the shader. The shader also is going to be an unlit shader, we don’t need this smoke interacting with light in any way for our case. We are displaying normal as the color value at the moment.</p>
+<p></p>
+<p></p>
+<p><img src="./Screen Shot 2025-08-15 at 1.19.36 PM.png" alt="Screen Shot 2025-08-15 at 1.19.36 PM.png" style="border-radius: 4px;" width="800px" ></p>
+<p>This is what the unity sphere looks like.</p>
+<p></p>
+<p><img src="./Screen Shot 2025-08-15 at 1.24.23 PM.png" alt="Screen Shot 2025-08-15 at 1.24.23 PM.png" style="border-radius: 4px;" width="800px" ></p>
+<p></p>
+<p>The result of the shader looks like this</p>
+<p><img src="./Screen Shot 2025-08-15 at 1.26.23 PM.png" alt="Screen Shot 2025-08-15 at 1.26.23 PM.png" style="border-radius: 4px;" width="800px" ></p>
+<p></p>
+<p></p>
+<p>This looks pretty good, but there is some squishing at the top and a visible seam.</p>
+<p></p>
+<p></p>
+<p><img src="./Screen Shot 2025-08-15 at 1.27.45 PM.png" alt="Screen Shot 2025-08-15 at 1.27.45 PM.png" style="border-radius: 4px;" width="800px" ></p>
+<p>Let’s see if we can get rid of this using a icosphere, I marked a seam horizontally across the sphere and Unwrapped it to get these UVs</p>
+<p></p>
+<p></p>
+<p><img src="./Screen Shot 2025-08-15 at 1.37.26 PM.png" alt="Screen Shot 2025-08-15 at 1.37.26 PM.png" style="border-radius: 4px;" width="800px" ></p>
+<p></p>
+<p><img src="./Screen Shot 2025-08-15 at 1.45.12 PM.png" alt="Screen Shot 2025-08-15 at 1.45.12 PM.png" style="border-radius: 4px;" width="800px" ></p>
+<p></p>
+<p><img src="./Screen_Shot_2025-08-15_at_1.45.12_PM_seams.png" alt="Screen_Shot_2025-08-15_at_1.45.12_PM_seams.png" style="border-radius: 4px;" width="800px" ></p>
+<p></p>
+<p></p>
+<p></p>
+<p><img src="./Screen Shot 2025-08-15 at 1.47.33 PM.png" alt="Screen Shot 2025-08-15 at 1.47.33 PM.png" style="border-radius: 4px;" width="800px" ></p>
+<p>Now this actually looks really good. The seam is still there, vertically, as seen with the red arrows. But it is less noticeable. Is this maybe because there are less vertices, so the texture isn’t as precise, so the seam isn’t as visible? The unity sphere had many more vertices.</p>
+<p></p>
+<p>I added time to the angle offset for the voronoi noise and got a super interesting effect (insert voronoiNoiseWithAngleAsTIme and voronoiNoiseWithAngleAsTIme2)</p>
+<p></p>
+<p>I just tried to displace each vertex along it’s normal vector, and learned that if the mesh is not shaded smooth, each face has a different vertex and a different normal, so I get this very weird effect</p>
+<p></p>
+<p></p>
+<p><img src="./Screen Shot 2025-09-14 at 1.51.21 PM.png" alt="Screen Shot 2025-09-14 at 1.51.21 PM.png" style="border-radius: 4px;" width="800px" ></p>
+<p>Now that I shaded it smooth, it looks like this below. It looks a lot better, but not perfect. The issue I am running into is that it splits across the UV seam. Maybe there is a way to achieve this effect without the seam.</p>
+<p></p>
+<p></p>
+<p><img src="./Screen Shot 2025-09-14 at 1.58.22 PM.png" alt="Screen Shot 2025-09-14 at 1.58.22 PM.png" style="border-radius: 4px;" width="800px" ></p>
+<p>Now this below looks a lot better. Instead of using UV for the input to the gradient noise to displace the vertex, we just use vertex position x and y.</p>
+<p></p>
+<p><img src="./Screen Shot 2025-09-14 at 2.15.04 PM.png" alt="Screen Shot 2025-09-14 at 2.15.04 PM.png" style="border-radius: 4px;" width="800px" ></p>
+<p></p>
+<p>I also use gradient noise to change the position of this overtime. I use the Position node as the input to the UV for the gradient noise. This gives a wobbling effect while the cloud is moving.</p>
+<video autoplay loop muted playsinline width=1200px>
+	<source src="./vertexDisplacementMovingByTime.mov" type="video/mp4">
+	Your browser does not support the video tag.
+</video>
+<p></p>
+<p>I also make the smoke disappear completely after a certain amount of seconds that the user defines. The alpha of the overall cloud will go down until it reaches 0. It would be nice to auto delete the object once it gets to this point, I can work on this next. One thing to note that I need to fix is that right now I am just using Time, and because Time is from start of first frame of the scene, not when the object is created, I need to make a custom script here to manage the time since this object has been created and pass that down as a property. This is TODO for next time. EDIT: This system actually may not work, as the particle system that I am trying to use for the smoke seems to only allow particles to be a mesh and shader, not prefab.</p>
+<p>One really sweet thing is that using Unitys particle system, I can check Color Over Lifetime, and that will be passed into vertex shader as vertex color, which is how I can make the color go from black to white. Also, depending on how “white” the particle is at any point, that is how I determine the alpha, the more white the particle is the more transparent it is, that makes it look like the smoke is completely dissapearing. Also added a small negative gravity to make it seem like it’s floating up.</p>
+<p></p>
+<video autoplay loop muted playsinline width=1200px>
+	<source src="./Screen Recording 2025-10-12 at 5.33.10 PM.mov" type="video/mp4">
+	Your browser does not support the video tag.
+</video>
+<p></p>
+<p>After messing around with size over lifetime, my material property deform scale and deform speed, and upping the speed and emmision rate of the particles, we  improve the visuals a ton. </p>
+<p></p>
+<video autoplay loop muted playsinline width=1200px>
+	<source src="./Screen Recording 2025-10-12 at 5.51.00 PM.mov" type="video/mp4">
+	Your browser does not support the video tag.
+</video>
+<video autoplay loop muted playsinline width=1200px>
+	<source src="./smokeFromBack.mov" type="video/mp4">
+	Your browser does not support the video tag.
+</video>
+<p>This is a demonstration of how the smoke looks in game. It looks pretty good. </p>
+<video autoplay loop muted playsinline width=1200px>
+	<source src="./movie_170.mp4" type="video/mp4">
+	Your browser does not support the video tag.
+</video>
+<p></p>
+<p></p>
+<p>The smoke particle system simulation is in local space, as you can see in the below video. The particle system is a child of the boss car, so it almost looks like the smoke is moving with the car, rather than leaving it behind.</p>
+<video autoplay loop muted playsinline width=1200px>
+	<source src="./SmokeLocalSpace.mp4" type="video/mp4">
+	Your browser does not support the video tag.
+</video>
+<p>We can remedy this by changing the particle system from local space to world space. As you can imagine, we will need to do some tweaking to the amount of smoke emitted, as it will look like much less smoke if we put this in world space and the car is moving fast.</p>
+<p></p>
+<video autoplay loop muted playsinline width=1200px>
+	<source src="./BossDrivingAway.mp4" type="video/mp4">
+	Your browser does not support the video tag.
+</video>
+<p></p>
+<p></p>
+<p>I went ahead and quickly modelled some headlights for the car in blender. </p>
+<p><img src="./Screen Shot 2025-10-13 at 6.10.08 PM.png" alt="Screen Shot 2025-10-13 at 6.10.08 PM.png" style="border-radius: 4px;" width="800px" ></p>
+<p></p>
+<p>This is the final product</p>
+<video autoplay loop muted playsinline width=1200px>
+	<source src="./SmokeFinalVideo.mp4" type="video/mp4">
+	Your browser does not support the video tag.
+</video>
+<p></p>
+<p>Here is the full shader, let's break down the three sections</p>
+<p><img src="./Screen Shot 2025-11-04 at 11.48.01 PM.png" alt="Screen Shot 2025-11-04 at 11.48.01 PM.png" style="border-radius: 4px;" width="800px" ></p>
+<p><img src="./Screen Shot 2025-11-04 at 11.48.01 PMAnnotated.png" alt="Screen Shot 2025-11-04 at 11.48.01 PMAnnotated.png" style="border-radius: 4px;" width="800px" ></p>
+</body>
+</html>
